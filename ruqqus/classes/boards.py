@@ -38,7 +38,7 @@ class Board(Base, Stndrd, Age_times):
     is_private=Column(Boolean, default=False)
     color_nonce=Column(Integer, default=0)
 
-    activeUsers = relationship("Active_Users", lazy="dynamic")
+    active_users = relationship("Active_Users", lazy="dynamic")
     moderators=relationship("ModRelationship", lazy="dynamic")
     subscribers=relationship("Subscription", lazy="dynamic")
     submissions=relationship("Submission", lazy="dynamic", primaryjoin="Board.id==Submission.board_id")
@@ -76,6 +76,14 @@ class Board(Base, Stndrd, Age_times):
         
         z=[x.user for x in self.moderators.filter_by(accepted=False, invite_rescinded=False).order_by(ModRelationship.id.asc()).all()]
         return z
+
+    @property
+    def active_users_count(self):
+        return self.active_users.filter(Active_Users.created_utc < int(time.time() - 3600*24*7)).count()
+
+    @property
+    def active_users(self):
+        return self.active_users.filter(Active_Users.created_utc < int(time.time() - 3600 * 24 * 7)).all()
 
     @property
     def mods_count(self):
