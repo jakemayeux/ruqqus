@@ -182,6 +182,7 @@ def users_list(v):
 def participation_stats(v):
 
     now=int(time.time())
+    one_week= now - int(3600 * 24 * 7)
 
     data={"banned_users":db.query(User).filter(User.is_banned>0, or_(User.unban_utc>now, User.unban_utc==0)).count(),
           "valid_accounts":db.query(User).filter_by(is_deleted=False).filter(or_(User.is_banned==0, and_(User.is_banned>0, User.unban_utc<now))).count(),
@@ -207,4 +208,30 @@ def participation_stats(v):
 
     data={x:f"{data[x]:,}" for x in data}
 
-    return render_template("admin/content_stats.html", v=v, data=data)
+    last_week_data = {"banned_users": db.query(User).filter(User.created_utc <= one_week).filter(User.is_banned > 0,
+                                                  or_(User.unban_utc > one_week, User.unban_utc == 0)).count(),
+            "valid_accounts": db.query(User).filter(User.created_utc <= one_week).filter_by(is_deleted=False).filter(
+                or_(User.is_banned == 0, and_(User.is_banned > 0, User.unban_utc < one_week))).count(),
+            "deleted_accounts": db.query(User).filter(User.created_utc <= one_week).filter_by(is_deleted=True).count(),
+            "total_posts": db.query(Submission).filter(Submission.created_utc <= one_week).count(),
+            "posting_users": db.query(User).filter(User.created_utc <= one_week).join(Submission.author).distinct().count(),
+            "listed_posts": db.query(Submission).filter(Submission.created_utc <= one_week).filter_by(is_banned=False, is_deleted=False).count(),
+            "removed_posts": db.query(Submission).filter(Submission.created_utc <= one_week).filter_by(is_banned=True).count(),
+            "deleted_posts": db.query(Submission).filter(Submission.created_utc <= one_week).filter_by(is_deleted=True).count(),
+            "total_comments": db.query(Comment).filter(Comment.created_utc <= one_week).count(),
+            "commenting_users": db.query(User).filter(User.created_utc <= one_week).join(Comment.author).filter(Comment.created_utc <= one_week).distinct().count(),
+            "removed_comments": db.query(Comment).filter(Comment.created_utc <= one_week).filter_by(is_banned=True).count(),
+            "deleted_comments": db.query(Comment).filter(Comment.created_utc <= one_week).filter_by(is_deleted=True).count(),
+            "total_guilds": db.query(Board).filter(Board.created_utc <= one_week).count(),
+            "listed_guilds": db.query(Board).filter(Board.created_utc <= one_week).filter_by(is_banned=False, is_private=False).count(),
+            "private_guilds": db.query(Board).filter(Board.created_utc <= one_week).filter_by(is_banned=False, is_private=True).count(),
+            "banned_guilds": db.query(Board).filter(Board.created_utc <= one_week).filter_by(is_banned=True).count(),
+            "post_votes": db.query(Vote).filter(Vote.created_utc <= one_week).count(),
+            "post_voting_users": db.query(User).join(Vote, Vote.user_id == User.id).distinct().count(),
+            "comment_votes": db.query(CommentVote).count(),
+            "comment_voting_users": db.query(User).filter(User.created_utc <= one_week).join(CommentVote, CommentVote.user_id == User.id).filter(CommentVote.created_utc <= one_week).distinct().count()
+            }
+
+    last_week_data = {x: f"{last_week_data[x]:,}" for x in last_week_data}
+
+    return render_template("admin/content_stats.html", v=v, data=data, last_week=last_week_data)
