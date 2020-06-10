@@ -9,6 +9,7 @@ from ruqqus.helpers.session import *
 import ruqqus.helpers.aws as aws
 from .submission import *
 from .board_relationships import *
+from .active_users import *
 from .comment import Comment
 from .mix_ins import *
 from ruqqus.__main__ import Base, db, cache
@@ -37,6 +38,7 @@ class Board(Base, Stndrd, Age_times):
     is_private=Column(Boolean, default=False)
     color_nonce=Column(Integer, default=0)
 
+    activeUsers = relationship("Active_Users", lazy="dynamic")
     moderators=relationship("ModRelationship", lazy="dynamic")
     subscribers=relationship("Subscription", lazy="dynamic")
     submissions=relationship("Submission", lazy="dynamic", primaryjoin="Board.id==Submission.board_id")
