@@ -16,14 +16,21 @@
 	<tr>
 		<th>Statistic</th>
 		<th>Value</th>
+        <th>Weekly Gain</th>
+        <th>Weekly %</th>
 	</tr>
 </thead>
-{% for entry in data %}
-	<tr>
-		<td>{{ entry }}</td>
-		<td>{{ data[entry] }}</td>
-	</tr>
+
+{% for i in range(data|length) %}
+    <tr>
+        <td>{{ data[i] }}</td>
+        <td>{{ data[data[i]] }}</td>
+        <td>{{ data[data[i]] - one_week[one_week[i]] }}</td>
+        <td>{{ (one_week[one_week[i]] / data[data[i]]) * 100}}</td>
+    </tr>
 {% endfor %}
 </table>
+
+
 
 {% endblock %}
