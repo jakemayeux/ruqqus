@@ -249,3 +249,28 @@ def api(f):
 
     wrapper.__name__=f.__name__
     return wrapper
+
+def update_activity(f):
+
+    def wrapper(*args, **kwargs):
+
+        board_id = request.values.get("guild_id", "none")
+        activity = db.query(Active_Users).filter_by(user_id=session["user_id"],
+                                                    board_id=board_id).first()
+        if activity:
+            activity.created_utc = int(time.time())
+        else:
+            activity = Active_Users(board_id=board_id,
+                                    user_id=session["user_id"],
+                                    created_utc=int(time.time()))
+            db.add(activity)
+        db.commit()
+
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+
+
+
+
+
