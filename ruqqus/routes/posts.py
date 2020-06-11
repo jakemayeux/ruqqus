@@ -85,6 +85,7 @@ def submit_get(v):
 @app.route("/edit_post/<pid>", methods=["POST"])
 @is_not_banned
 @validate_formkey
+@update_activity
 def edit_post(pid, v):
     
     p = get_post(pid)
@@ -150,6 +151,7 @@ def get_post_title(v):
 @is_not_banned
 @tos_agreed
 @validate_formkey
+@update_activity
 def submit_post(v):
 
     title=request.form.get("title","")
@@ -435,6 +437,7 @@ def api_nsfw_pid(pid, x, v):
 @app.route("/delete_post/<pid>", methods=["POST"])
 @auth_required
 @validate_formkey
+@update_activity
 def delete_post_pid(pid, v):
 
     post=get_post(pid)
