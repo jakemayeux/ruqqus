@@ -186,6 +186,7 @@ def post_pid_comment_cid(p_id, c_id, anything=None, v=None):
 @is_not_banned
 @tos_agreed
 @validate_formkey
+@update_activity
 def api_comment(v):
 
     parent_submission=base36decode(request.form.get("submission"))
@@ -301,6 +302,7 @@ def api_comment(v):
 @is_not_banned
 @validate_formkey
 @api
+@update_activity
 def edit_comment(cid, v):
 
     c = get_comment(cid)
@@ -350,6 +352,7 @@ def edit_comment(cid, v):
 @auth_required
 @validate_formkey
 @api
+@update_activity
 def delete_comment(cid, v):
 
     c=db.query(Comment).filter_by(id=base36decode(cid)).first()
