@@ -12,6 +12,7 @@ from ruqqus.__main__ import app, db
 @app.route("/api/vote/post/<post_id>/<x>", methods=["POST"])
 @is_not_banned
 @validate_formkey
+@update_activity
 def api_vote_post(post_id, x, v):
 
     
@@ -55,6 +56,7 @@ def api_vote_post(post_id, x, v):
 @app.route("/api/vote/comment/<comment_id>/<x>", methods=["POST"])
 @is_not_banned
 @validate_formkey
+@update_activity
 def api_vote_comment(comment_id, x, v):
 
     
