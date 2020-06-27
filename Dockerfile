@@ -1,5 +1,4 @@
-# Ubuntu 18.04 / Heroku 18
-FROM ubuntu:bionic-20200526
+FROM heroku/heroku:18
 
 COPY supervisord.conf /etc/supervisord.conf
 
