@@ -64,61 +64,31 @@ As an open-source project, we are supported by the community. If you would like 
 
 ## Local development
 
-### Mac
+### Docker
 
-Install dependencies
+`$ docker-compose up -d postgres redis`
 
-`$ pip3 install -r requirements.txt`
+If it is your first time running things, run the database migrations
 
-`$ brew install redis`
+ - General migrations 
+ 
+  - `$ psql postgres -h localhost -U postgres -a -f schema.txt`
+ 
+ - Add test user to database (password = password)
+ 
+  - `$ psql postgres`
 
-`$ brew install postgres`
-
-
-Start services
-
-`$ redis-server /usr/local/etc/redis.conf`
-
-`$ psql postgres -a -f schema.txt`
-
-
-Add test user to database (password = password)
-
-`$ psql postgres`
-
-```
+  - ```
 INSERT INTO users (id, username, email, passhash, created_utc, creation_ip, tos_agreed_utc, login_nonce)
          VALUES (NEXTVAL('users_id_seq'), 'ruqqie', 'ruqqie@ruqqus.com', 'pbkdf2:sha512:150000$vmPzuBFj$24cde8a6305b7c528b0428b1e87f256c65741bb035b4356549c13e745cc0581701431d5a2297d98501fcf20367791b4334dcd19cf063a6e60195abe8214f91e8',
          1592672337, '127.0.0.1', 1592672337, 1);
 ```
 
+`$ docker-compose up -d ruqqus`
 
-Add this line to `/etc/hosts`
+Edit your hosts file to include
 
 `127.0.0.1 ruqqus.localhost`
-
-
-Refresh DNS
-
-`$ sudo killall -HUP mDNSResponder`
-
-
-Create environment variables
-
-`$ export domain=ruqqus.localhost:8000`
-
-`$ export REDIS_URL=redis://localhost:6379`
-
-`$ export DATABASE_URL=postgres://localhost:5432/postgres`
-
-`$ export PYTHONPATH=$(/path/to/ruqqus/root)`
-
-`$ export MASTER_KEY=$(openssl rand -base64 32)`
-
-
-Run Ruqqus
-
-`$ gunicorn ruqqus.__main__:app -w 3 -k gevent --worker-connections 6 --preload --max-requests 500 --max-requests-jitter 50`
 
 
 ## License
