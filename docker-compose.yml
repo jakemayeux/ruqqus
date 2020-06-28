@@ -8,8 +8,8 @@ services:
       - "./:/opt/ruqqus/service"
     environment:
       - domain=ruqqus.localhost:8000
-      - REDIS_URL=redis://host.docker.internal:6379
-      - DATABASE_URL=postgres://postgres@host.docker.internal:5432/postgres
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://postgres@postgres:5432/postgres
       - PYTHONPATH="/opt/ruqqus/service"
       - MASTER_KEY=${MASTER_KEY:-KTVciAUQFpFh2WdJ/oiHJlxl6FvzRZp8kYzAAv3l2OA=}
       - COOKIE_SESSION_SECURE=false
