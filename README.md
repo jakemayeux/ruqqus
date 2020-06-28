@@ -90,6 +90,8 @@ Edit your hosts file to include
 
 `127.0.0.1 ruqqus.localhost`
 
+Go to http://ruqqus.localhost:8000
+
 
 ## License
 [MPL-2.0](https://github.com/ruqqus/ruqqus/blob/master/LICENSE)
