@@ -76,7 +76,7 @@ If it is your first time running things, run the database migrations
  
  - Add test user to database (password = password)
  
-  - `$ psql postgres`
+  - `$ psql postgres -h localhost -U postgres`
 
   - ```
 INSERT INTO users (id, username, email, passhash, created_utc, creation_ip, tos_agreed_utc, login_nonce)
