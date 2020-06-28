@@ -15,6 +15,9 @@ services:
       - COOKIE_SESSION_SECURE=false
       - FLASK_DEBUG=1
       - FLASK_ENV=development
+    links:
+      - "redis"
+      - "postgres"
     ports:
       - "8000:8000"
 
