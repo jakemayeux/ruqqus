@@ -12,7 +12,7 @@ services:
       - DATABASE_URL=postgres://postgres@postgres:5432/postgres
       - PYTHONPATH="/opt/ruqqus/service"
       - MASTER_KEY=${MASTER_KEY:-KTVciAUQFpFh2WdJ/oiHJlxl6FvzRZp8kYzAAv3l2OA=}
-      - COOKIE_SESSION_SECURE=false
+      - SESSION_COOKIE_SECURE=false
       - FLASK_DEBUG=1
       - FLASK_ENV=development
     links:
