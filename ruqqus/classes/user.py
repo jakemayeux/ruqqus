@@ -191,7 +191,7 @@ class User(Base, Stndrd):
                                     isouter=True
                                     )
             posts=posts.filter(or_(Submission.author_id==self.id,
-                                   Submission.is_public==True,
+                                   Submission.post_public==True,
                                    m.c.board_id != None,
                                    c.c.board_id !=None))
 
@@ -223,7 +223,7 @@ class User(Base, Stndrd):
             
 
         if sort=="hot":
-            posts=posts.order_by(Submission.score_hot.desc())
+            posts=posts.order_by(Submission.score_best.desc())
         elif sort=="new":
             posts=posts.order_by(Submission.created_utc.desc())
         elif sort=="disputed":

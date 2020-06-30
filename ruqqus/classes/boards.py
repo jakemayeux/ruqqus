@@ -112,12 +112,12 @@ class Board(Base, Stndrd, Age_times):
             if v and (self.can_view(v) or v.admin_level >= 4):
                 pass
             elif v:
-                posts=posts.filter(or_(Submission.is_public==True,
+                posts=posts.filter(or_(Submission.post_public==True,
                                        Submission.author_id==v.id
                                        )
                                    )
             else:
-                posts=posts.filter_by(is_public=True)
+                posts=posts.filter_by(post_public=True)
 
         if v and not self.has_mod(v) and v.admin_level<=3:
             #blocks
@@ -324,11 +324,11 @@ class Board(Base, Stndrd, Age_times):
 
     @property
     def css_url(self):
-        return f"{self.permalink}/main/{self.color_nonce}.css"
+        return f"/assets/{self.name}/main/{self.color_nonce}.css"
 
     @property
     def css_dark_url(self):
-        return f"{self.permalink}/dark/{self.color_nonce}.css"
+        return f"/assets/{self.name}/dark/{self.color_nonce}.css"
 
 
     def has_participant(self, user):

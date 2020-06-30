@@ -9,7 +9,6 @@ def recompute():
 
     while True:
 
-        db.begin()
 
         now=int(time.time())
 
@@ -28,11 +27,17 @@ def recompute():
             post.score_disputed=post.rank_fiery
             #post.score_top=post.score
             post.score_activity=post.rank_activity
+            post.score_best=post.rank_best
 
             db.add(post)
+
+            if not i%100:
+                db.commit()
             
 
             #print(f"{i}/{total} - {post.base36id}")
+
+        db.commit()
 
         print(f"Scored {i} posts. Beginning comment recompute")
 
@@ -57,12 +62,14 @@ def recompute():
             #comment.score_top=comment.score
 
             db.add(comment)
+            if not i%100:
+                db.commit()
             
         db.commit()
 
         print(f"Scored {i} comments. Sleeping 1min")
 
-        #time.sleep(60)
+        time.sleep(60)
 
 
 recompute()

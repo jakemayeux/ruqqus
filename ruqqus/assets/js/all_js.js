@@ -1606,8 +1606,9 @@ comment_edit=function(id){
   xhr.withCredentials=true;
   xhr.onload=function(){
     if (xhr.status==200) {
-      commentForm=document.getElementById('comment-'+id);
+      commentForm=document.getElementById('comment-text-'+id);
       commentForm.innerHTML=JSON.parse(xhr.response)["html"];
+      document.getElementById('cancel-edit-'+id).click()
       $('#toast-comment-success').toast('dispose');
       $('#toast-comment-error').toast('dispose');
       $('#toast-comment-success').toast('show');

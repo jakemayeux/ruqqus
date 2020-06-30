@@ -35,19 +35,38 @@ def notifications(v):
                            page=page,
                            standalone=True)
 
-@cache.memoize(timeout=300)
-def frontlist(sort="hot", page=1, nsfw=False, t=None, v=None, **kwargs):
+@cache.memoize(timeout=900)
+def frontlist(sort="hot", page=1, nsfw=False, t=None, v=None, ids_only=True, **kwargs):
 
     #cutoff=int(time.time())-(60*60*24*30)
 
-    posts = g.db.query(Submission.id).filter_by(is_banned=False,
-                                           is_deleted=False,
-                                           stickied=False)
+
+    if sort=="hot":
+        sort_func=Submission.score_hot.desc
+    elif sort=="new":
+        sort_func=Submission.created_utc.desc
+    elif sort=="disputed":
+        sort_func=Submission.score_disputed.desc
+    elif sort=="top":
+        sort_func=Submission.score_top.desc
+    elif sort=="activity":
+        sort_func=Submission.score_activity.desc
+    else:
+        abort(422)
+
+    posts = g.db.query(Submission,
+        func.rank().over(
+            partition_by=Submission.board_id,
+            order_by=sort_func()
+            ).label("rn")
+        ).filter_by(is_banned=False,
+        is_deleted=False,
+        stickied=False)
+
     if not (v and v.over_18):
         posts=posts.filter_by(over_18=False)
 
-    if v and v.hide_offensive:
-        posts=posts.filter_by(is_offensive=False)
+    posts=posts.filter_by(is_offensive=False)
 
     if v and v.admin_level >= 4:
         pass
@@ -76,7 +95,7 @@ def frontlist(sort="hot", page=1, nsfw=False, t=None, v=None, **kwargs):
                     blocking.c.id==None,
                     blocked.c.id==None)
     else:
-        posts=posts.filter_by(is_public=True)
+        posts=posts.filter_by(post_public=True)
 
 
 
@@ -94,7 +113,6 @@ def frontlist(sort="hot", page=1, nsfw=False, t=None, v=None, **kwargs):
             cutoff=0        
         posts=posts.filter(Submission.created_utc >= cutoff)
 
-        
     if sort=="hot":
         posts=posts.order_by(Submission.score_hot.desc())
     elif sort=="new":
@@ -108,7 +126,19 @@ def frontlist(sort="hot", page=1, nsfw=False, t=None, v=None, **kwargs):
     else:
         abort(422)
 
-    return [x[0] for x in posts.offset(25*(page-1)).limit(26).all()]
+    posts_subquery=posts.subquery()
+
+    if sort=="hot":
+        posts=g.db.query(posts_subquery).filter(posts_subquery.c.rn<=2)
+    else:
+        posts=g.db.query(posts_subquery)
+
+    if ids_only:
+        posts=[x.id for x in posts.offset(25*(page-1)).limit(26).all()]
+        return posts
+    else:
+        return [x for x in posts.offset(25*(page-1)).limit(25).all()]
+
 
 @app.route("/", methods=["GET"])
 @app.route("/api/v1/front/listing", methods=["GET"])
@@ -135,7 +165,7 @@ def home(v):
         ids=ids[0:25]
 
         #If page 1, check for sticky
-        if page==1:
+        if page==1 and sort != "new":
             sticky=g.db.query(Submission.id).filter_by(stickied=True).first()
             if sticky:
                 ids=[sticky.id]+ids
@@ -392,9 +422,6 @@ def random_guild(v):
         over_18=False,
         is_nsfl=False)
 
-    if v and v.hide_offensive:
-        x=x.filter_by(is_offensive=False)
-
     if v:
         bans=g.db.query(BanRelationship.id).filter_by(user_id=v.id).all()
         x=x.filter(Board.id.notin_([i[0] for i in bans]))
@@ -409,16 +436,11 @@ def random_comment(v):
 
     x=g.db.query(Comment).filter_by(is_banned=False,
         over_18=False,
-        is_nsfl=False)
-
-    if v and v.hide_offensive:
-        x=x.filter_by(is_offensive=False)
-
+        is_nsfl=False,
+        is_offensive=False)
     if v:
         bans=g.db.query(BanRelationship.id).filter_by(user_id=v.id).all()
         x=x.filter(Comment.board_id.notin_([i[0] for i in bans]))
-
-
     comment=x.order_by(func.random()).first()
 
     return redirect(comment.permalink)

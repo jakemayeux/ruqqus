@@ -217,12 +217,13 @@ def submit_post(v):
         url=""
 
     #check for duplicate
-    dup = g.db.query(Submission).filter_by(title=title,
-                                         author_id=v.id,
-                                         url=url,
-                                         is_deleted=False,
-                                         board_id=board.id
-                                         ).first()
+    dup = g.db.query(Submission).filter(
+      Submission.author_id==v.id,
+      Submission.is_deleted==False,
+      Submission.board_id==board.id,
+      SubmissionAux.title==title, 
+      SubmissionAux.url==url
+      ).first()
 
     if dup:
         return redirect(dup.permalink)
@@ -345,19 +346,26 @@ def submit_post(v):
     domain=parsed_url.netloc
 
     if url:
-      repost = g.db.query(Submission).filter(Submission.url.ilike(url)).filter_by(board_id=board.id, is_deleted=False, is_banned=False).order_by(Submission.id.asc()).first()
+      repost = g.db.query(Submission).join(Submission.submission_aux).filter(
+        SubmissionAux.url.ilike(url),
+        Submission.board_id==board.id,
+        Submission.is_deleted==False, 
+        Submission.is_banned==False
+        ).order_by(
+        Submission.id.asc()
+        ).first()
     else:
       repost=None
 
     if request.files.get('file') and not v.can_submit_image:
         abort(403)
 
-    new_post=Submission(title=title,
-                        url=url,
+    new_post=Submission(#title=title,
+          #              url=url,
                         author_id=user_id,
-                        body=body,
-                        body_html=body_html,
-                        embed_url=embed,
+          #              body=body,
+          #              body_html=body_html,
+          #              embed_url=embed,
                         domain_ref=domain_obj.id if domain_obj else None,
                         board_id=board.id,
                         original_board_id=board.id,
@@ -368,11 +376,26 @@ def submit_post(v):
                         repost_id=repost.id if repost else None
                         )
 
+
+
+    g.db.add(new_post)
+    g.db.commit()
+
+    new_post_aux=SubmissionAux(id=new_post.id,
+                               url=url,
+                               body=body,
+                               body_html=body_html,
+                               embed_url=embed,
+                               title=title
+                               )
+    g.db.add(new_post_aux)
+    g.db.commit()
+
+    #refresh new post
+    g.db.refresh(new_post)
+
     new_post.determine_offensive()
     g.db.add(new_post)
-
-    g.db.commit()
-    
 
     vote=Vote(user_id=user_id,
               vote_type=1,

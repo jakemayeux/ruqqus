@@ -12,18 +12,19 @@ from time import sleep
 
 from flaskext.markdown import Markdown
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import Session, sessionmaker, scoped_session
 from sqlalchemy import *
 from sqlalchemy.pool import QueuePool
 import threading
 import requests
+import random
 
 from redis import BlockingConnectionPool
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 
-_version = "2.12.5"
+_version = "2.13.0"
 
 app = Flask(__name__,
             template_folder='./templates',
@@ -33,6 +34,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=2)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = environ.get("DATABASE_URL")
+# app.config['SQLALCHEMY_READ_URIS']=[
+#     environ.get("HEROKU_POSTGRESQL_CRIMSON_URL"),
+#     environ.get("HEROKU_POSTGRESQL_RED_URL")
+#     ]
+
 app.config['SECRET_KEY']=environ.get('MASTER_KEY')
 app.config["SERVER_NAME"]=environ.get("domain", None)
 app.config["SESSION_COOKIE_NAME"]="session_ruqqus"
@@ -57,6 +63,10 @@ app.config["CACHE_REDIS_URL"]=environ.get("REDIS_URL")
 app.config["CACHE_DEFAULT_TIMEOUT"]=60
 app.config["CACHE_KEY_PREFIX"]="flask_caching_"
 
+app.config["REDIS_POOL_SIZE"]=int(environ.get("REDIS_POOL_SIZE", 30))
+
+redispool=BlockingConnectionPool(max_connections=app.config["REDIS_POOL_SIZE"])
+app.config["CACHE_OPTIONS"]={'connection_pool':redispool}
 
 Markdown(app)
 cache=Cache(app)
@@ -75,15 +85,19 @@ limiter = Limiter(
 )
 
 #setup db
-_engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+pool_size=int(environ.get("PG_POOL_SIZE", 10))
+engines={
+    "leader":create_engine(app.config['SQLALCHEMY_DATABASE_URI'], pool_size=pool_size, pool_use_lifo=True) #,
+    #"followers":[create_engine(x, pool_size=pool_size, pool_use_lifo=True) for x in app.config['SQLALCHEMY_READ_URIS']] if any(i for i in app.config['SQLALCHEMY_READ_URIS']) else [create_engine(app.config['SQLALCHEMY_DATABASE_URI'], pool_size=pool_size, pool_use_lifo=True)]
+}
 
-
-
-def make_session():
-    return sessionmaker(bind=_engine)()
-thread_session=make_session()
-
-
+# class RoutingSession(Session):
+#     def get_bind(self, mapper=None, clause=None):
+#         if self._flushing:
+#             return engines['leader']
+#         else:
+#             return random.choice(engines['followers'])
+db_session=scoped_session(sessionmaker(bind=engines["leader"]))
 
 Base = declarative_base()
 
@@ -91,6 +105,12 @@ Base = declarative_base()
 import ruqqus.classes
 from ruqqus.routes import *
 import ruqqus.helpers.jinja2
+
+
+@app.before_first_request
+def app_setup():
+    #app.config["databases"]=scoped_session(sessionmaker(class_=RoutingSession))
+    pass
 
 
 IP_BAN_CACHE_TTL = int(environ.get("IP_BAN_CACHE_TTL", 3600))
@@ -121,7 +141,7 @@ def get_useragent_ban_response(user_agent_str):
 @app.before_request
 def before_request():
 
-    g.db = thread_session
+    g.db = db_session()
 
     session.permanent = True
 
@@ -139,8 +159,7 @@ def before_request():
     if not session.get("session_id"):
         session["session_id"]=secrets.token_hex(16)
 
-    #db.rollback()
-    #g.db.begin(subtransactions=True)
+    #g.db.begin_nested()
 
 
 def log_event(name, link):
@@ -173,7 +192,7 @@ def after_request(response):
     try:
         g.db.commit()
     except:
-        pass
+        pass #g.db.close()
 
     response.headers.add('Access-Control-Allow-Headers',
                          "Origin, X-Requested-With, Content-Type, Accept, x-auth"
@@ -195,10 +214,17 @@ def after_request(response):
         thread=threading.Thread(target=lambda:log_event(name="Account Signup", link=link))
         thread.start()
 
+    g.db.close()
+
     return response
 
 @app.route("/<path:path>", subdomain="www")
 def www_redirect(path):
 
     return redirect(f"https://ruqqus.com/{path}")
+
+# @app.teardown_appcontext
+# def teardown(resp):
+
+#     g.db.close()
 

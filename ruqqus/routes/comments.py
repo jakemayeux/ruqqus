@@ -17,6 +17,9 @@ from ruqqus.__main__ import app, limiter
 from werkzeug.contrib.atom import AtomFeed
 from datetime import datetime
 
+
+
+
 @app.route("/comment/<cid>", methods=["GET"])
 def comment_cid(cid):
 
@@ -112,7 +115,9 @@ def post_pid_comment_cid(p_id, c_id, anything=None, v=None):
                 votes.c.vote_type
                 ).filter(
                 Comment.parent_comment_id.in_(current_ids)
-                ).join(Comment.author).join(
+                ).join(
+                Comment._author
+                ).join(
                 User.title,
                 isouter=True
                 ).join(
@@ -139,6 +144,7 @@ def post_pid_comment_cid(p_id, c_id, anything=None, v=None):
             output=[]
             for c in comms:
                 com=c[0]
+                com.author=c[1]
                 com._title=c[2]
                 com._voted=c[3] or 0
                 output.append(com)
@@ -149,7 +155,7 @@ def post_pid_comment_cid(p_id, c_id, anything=None, v=None):
                 Title
                 ).filter(
                 Comment.parent_comment_id.in_(current_ids)
-                ).join(Comment.author).join(
+                ).join(Comment._author).join(
                 User.title,
                 isouter=True
                 )
@@ -171,6 +177,7 @@ def post_pid_comment_cid(p_id, c_id, anything=None, v=None):
             output=[]
             for c in comms:
                 com=c[0]
+                com.author=c[1]
                 com._title=c[2]
                 output.append(com)
 
@@ -205,36 +212,34 @@ def api_comment(v):
     bans=filter_comment_html(body_html)
 
     if bans:
-        return render_template("comment_failed.html",
-                               action="/api/comment",
-                               parent_submission=request.form.get("submission"),
-                               parent_fullname=request.form.get("parent_fullname"),
-                               badlinks=[x.domain for x in bans],
-                               body=body,
-                               is_deleted=False,
-                               v=v
-                               ), 422
+        ban=bans[0]
+        reason=f"Remove the {ban.domain} link from your comment and try again."
+        if ban.reason:
+          reason += f" {ban.reason_text}"
+        return jsonify({"error": reason}), 401
 
-    #check existing
-    existing=g.db.query(Comment).filter_by(author_id=v.id,
-                                         body=body,
-                                         is_deleted=False,
-                                         parent_fullname=parent_fullname,
-                                         parent_submission=parent_submission
-                                         ).first()
-    if existing:
-        return jsonify({"error":"You already made that comment."}), 409
+
 
     #get parent item info
-    parent_id=int(parent_fullname.split("_")[1], 36)
+    parent_id=parent_fullname.split("_")[1]
     if parent_fullname.startswith("t2"):
-        parent=g.db.query(Submission).filter_by(id=parent_id).first()
+        parent=get_post(parent_id, v=v)
         parent_comment_id=None
         level=1
     elif parent_fullname.startswith("t3"):
-        parent=g.db.query(Comment).filter_by(id=parent_id).first()
+        parent=get_comment(parent_id, v=v)
         parent_comment_id=parent.id
         level=parent.level+1
+
+    #check existing
+    existing=g.db.query(Comment).join(CommentAux).filter(Comment.author_id==v.id,
+                                         Comment.is_deleted==False,
+                                         Comment.parent_comment_id==parent_comment_id,
+                                         Comment.parent_submission==parent_submission,
+                                         CommentAux.body==body
+                                         ).first()
+    if existing:
+        return jsonify({"error":f"You already made that comment: {existing.permalink}"}), 409
 
     #No commenting on deleted/removed things
     if parent.is_banned or parent.is_deleted:
@@ -251,25 +256,35 @@ def api_comment(v):
         
     #create comment
     c=Comment(author_id=v.id,
-              body=body,
-              body_html=body_html,
               parent_submission=parent_submission,
               parent_fullname=parent_fullname,
               parent_comment_id=parent_comment_id,
               level=level,
-              author_name=v.username,
               over_18=post.over_18,
               is_nsfl=post.is_nsfl,
               is_op=(v.id==post.author_id)
               )
 
+    g.db.add(c)
+    g.db.commit()
+
+
+       
+    c_aux=CommentAux(
+      id=c.id,
+      body_html=body_html,
+      body=body
+      )
+    g.db.add(c_aux)
+    g.db.commit()
+
+    #reload c
+    g.db.refresh(c)
+
     c.determine_offensive()
     g.db.add(c)
     
     g.db.commit()
-       
-
-
     notify_users=set()
 
     #queue up notification for parent author
@@ -324,7 +339,7 @@ def api_comment(v):
 #@api
 def edit_comment(cid, v):
 
-    c = get_comment(cid)
+    c = get_comment(cid, v=v)
 
     if not c.author_id == v.id:
         abort(403)
@@ -359,19 +374,14 @@ def edit_comment(cid, v):
 
     g.db.add(c)
     
+    g.db.commit()
+    g.db.refresh(c)
 
     c.determine_offensive()
 
     path=request.form.get("current_page","/")
 
-    return jsonify({"html":render_template("comments.html",
-                                           v=v, 
-                                           comments=[c], 
-                                           render_replies=False,
-                                           is_allowed_to_comment=True
-                                           )
-                    }
-    )
+    return jsonify({"html":c.body_html})
 
 @app.route("/delete/comment/<cid>", methods=["POST"])
 @app.route("/api/v1/delete/comment/<cid>", methods=["POST"])
