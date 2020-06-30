@@ -5,4 +5,15 @@ INSERT INTO users (id, username, email, passhash, created_utc, creation_ip, tos_
 
 
 -- Temporary fix until schema.txt is officially updated
-ALTER TABLE submissions ADD score_best column_definition;
+ALTER TABLE submissions ADD score_best real;
+
+CREATE TABLE submissions_aux(
+   key_id BIGINT,
+   id INTEGER REFERENCES submissions(id),
+   title TEXT,
+   url TEXT,
+   body TEXT,
+   body_html TEXT,
+   ban_reason TEXT,
+   embed_url TEXT
+);
