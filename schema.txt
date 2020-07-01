@@ -148,7 +148,8 @@ CREATE TABLE public.submissions (
     is_offensive boolean,
     is_pinned boolean DEFAULT false,
     is_nsfl boolean DEFAULT false,
-    repost_id integer DEFAULT 0
+    repost_id integer DEFAULT 0,
+		score_best double precision DEFAULT 0
 );
 
 
@@ -2991,6 +2992,21 @@ ALTER TABLE ONLY public.users
 ALTER TABLE ONLY public.votes
     ADD CONSTRAINT votes_submission_id_fkey FOREIGN KEY (submission_id) REFERENCES public.submissions(id);
 
+
+--
+-- Name: submissions_aux; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.submissions_aux(
+   key_id BIGINT,
+   id INTEGER REFERENCES public.submissions(id),
+   title TEXT,
+   url TEXT,
+   body TEXT,
+   body_html TEXT,
+   ban_reason TEXT,
+   embed_url TEXT
+);
 
 --
 -- PostgreSQL database dump complete
