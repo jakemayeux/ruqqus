@@ -149,7 +149,7 @@ CREATE TABLE public.submissions (
     is_pinned boolean DEFAULT false,
     is_nsfl boolean DEFAULT false,
     repost_id integer DEFAULT 0,
-		score_best double precision DEFAULT 0
+    score_best double precision DEFAULT 0
 );
 
 
