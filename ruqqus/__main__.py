@@ -33,7 +33,7 @@ app = Flask(__name__,
 app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=2)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = environ.get("DATABASE_URL")
+app.config['SQLALCHEMY_DATABASE_URI'] = environ.get("DATABASE_CONNECTION_POOL_URL")
 # app.config['SQLALCHEMY_READ_URIS']=[
 #     environ.get("HEROKU_POSTGRESQL_CRIMSON_URL"),
 #     environ.get("HEROKU_POSTGRESQL_RED_URL")
@@ -58,15 +58,17 @@ if "localhost" in app.config["SERVER_NAME"]:
     app.config["CACHE_TYPE"]="null"
 else:
     app.config["CACHE_TYPE"]=environ.get("CACHE_TYPE", 'null')
+
+app.config["CACHE_DIR"]=environ.get("CACHE_DIR")
     
-app.config["CACHE_REDIS_URL"]=environ.get("REDIS_URL")
-app.config["CACHE_DEFAULT_TIMEOUT"]=60
-app.config["CACHE_KEY_PREFIX"]="flask_caching_"
+#app.config["CACHE_REDIS_URL"]=environ.get("REDIS_URL")
+#app.config["CACHE_DEFAULT_TIMEOUT"]=60
+#app.config["CACHE_KEY_PREFIX"]="flask_caching_"
 
-app.config["REDIS_POOL_SIZE"]=int(environ.get("REDIS_POOL_SIZE", 30))
+#app.config["REDIS_POOL_SIZE"]=int(environ.get("REDIS_POOL_SIZE", 30))
 
-redispool=BlockingConnectionPool(max_connections=app.config["REDIS_POOL_SIZE"])
-app.config["CACHE_OPTIONS"]={'connection_pool':redispool}
+#redispool=BlockingConnectionPool(max_connections=app.config["REDIS_POOL_SIZE"])
+#app.config["CACHE_OPTIONS"]={'connection_pool':redispool}
 
 Markdown(app)
 cache=Cache(app)
